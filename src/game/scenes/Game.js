@@ -1,28 +1,51 @@
-import { Scene } from 'phaser';
+import { Scene } from "phaser";
 
-export class Game extends Scene
-{
-    constructor ()
-    {
-        super('Game');
-    }
+export class Game extends Scene {
+  constructor() {
+    super("Game");
+  }
 
-    create ()
-    {
-        this.cameras.main.setBackgroundColor(0x00ff00);
+  create() {
+    this.player = this.add.rectangle(160, 120, 16, 16, 0xffffff);
 
-        this.add.image(512, 384, 'background').setAlpha(0.5);
+    this.physics.add.existing(this.player);
+    this.cursors = this.input.keyboard.createCursorKeys();
 
-        this.add.text(512, 384, 'Make something fun!\nand share it with us:\nsupport@phaser.io', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
-        }).setOrigin(0.5);
+    this.cursorsW = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.W,
+    );
+    this.cursorsA = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.A,
+    );
+    this.cursorsS = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.S,
+    );
+    this.cursorsD = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.D,
+    );
+  }
 
-        this.input.once('pointerdown', () => {
+  update() {
+    this.player.body.setVelocity(0);
 
-            this.scene.start('GameOver');
+    let dirX = 0;
+    let dirY = 0;
 
-        });
-    }
+    if (this.cursors.left.isDown || this.cursorsA.isDown) dirX = -1;
+    else if (this.cursors.right.isDown || this.cursorsD.isDown) dirX = 1;
+
+    if (this.cursors.up.isDown || this.cursorsW.isDown) dirY = -1;
+    else if (this.cursors.down.isDown || this.cursorsS.isDown) dirY = 1;
+
+    const velocityVector = new Phaser.Math.Vector2(dirX, dirY);
+
+    velocityVector.normalize();
+
+    const velocidadeBase = 100;
+
+    this.player.body.setVelocity(
+      velocityVector.x * velocidadeBase,
+      velocityVector.y * velocidadeBase,
+    );
+  }
 }
