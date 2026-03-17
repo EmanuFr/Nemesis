@@ -6,9 +6,34 @@ export class Game extends Scene {
   }
 
   create() {
-    this.player = this.add.rectangle(160, 120, 16, 16, 0xffffff);
+    //player
+    this.player = this.physics.add.sprite(160, 120, "player");
+    this.anims.create({
+      key: "left",
+      frames: this.anims.generateFrameNumbers("player", {
+        start: 0,
+        end: 3,
+      }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "right",
+      frames: this.anims.generateFrameNumbers("player", { start: 5, end: 8 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "idle",
+      frames: [{ key: "player", frame: 4 }], // Pegando apenas UM quadro
+      frameRate: 10,
+    });
 
+    //colisão
     this.physics.add.existing(this.player);
+    this.player.body.setCollideWorldBounds(true);
+
+    //movimentação
     this.cursors = this.input.keyboard.createCursorKeys();
 
     this.cursorsW = this.input.keyboard.addKey(
@@ -47,5 +72,15 @@ export class Game extends Scene {
       velocityVector.x * velocidadeBase,
       velocityVector.y * velocidadeBase,
     );
+
+    if (dirX === -1) {
+      this.player.anims.play("left", true);
+    } else if (dirX === 1) {
+      this.player.anims.play("right", true);
+    }
+
+    if (dirX === 0 && dirY === 0) {
+      this.player.anims.play("idle", true);
+    }
   }
 }
