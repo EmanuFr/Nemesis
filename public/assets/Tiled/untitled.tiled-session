@@ -1,0 +1,69 @@
+{
+    "activeFile": "Sala.tmj",
+    "expandedProjectPaths": [
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "Sala.tmj": {
+            "scale": 3.6342,
+            "selectedLayer": 5,
+            "viewCenter": {
+                "x": 140.19591657035937,
+                "y": 108.00176104782346
+            }
+        },
+        "Sala.tmj#TopDownHouse_DoorsAndWindows": {
+            "scaleInDock": 1
+        },
+        "Sala.tmj#TopDownHouse_FloorsAndWalls": {
+            "scaleInDock": 1
+        },
+        "Sala.tmj#TopDownHouse_FloorsAndWalls_OpenDoors": {
+            "scaleInDock": 1
+        },
+        "Sala.tmj#TopDownHouse_FurnitureState1": {
+            "scaleInDock": 1
+        },
+        "Sala.tmj#TopDownHouse_FurnitureState2": {
+            "scaleInDock": 1
+        },
+        "Sala.tmj#TopDownHouse_SmallItems": {
+            "scaleInDock": 1
+        },
+        "TopDownHouse_DoorsAndWindows.tsx": {
+            "scaleInDock": 1
+        },
+        "TopDownHouse_FloorsAndWalls.tsx": {
+            "scaleInDock": 1
+        },
+        "TopDownHouse_FloorsAndWalls_OpenDoors.tsx": {
+            "scaleInDock": 1
+        },
+        "TopDownHouse_FurnitureState1.tsx": {
+            "scaleInDock": 1
+        },
+        "TopDownHouse_FurnitureState2.tsx": {
+            "scaleInDock": 1
+        },
+        "TopDownHouse_SmallItems.tsx": {
+            "scaleInDock": 1
+        }
+    },
+    "map.height": 15,
+    "map.lastUsedFormat": "json",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 20,
+    "openFiles": [
+        "Sala.tmj"
+    ],
+    "project": "untitled.tiled-project",
+    "recentFiles": [
+        "Sala.tmj"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}

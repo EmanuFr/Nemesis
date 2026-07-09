@@ -12,6 +12,7 @@ const config = {
   parent: "game-container",
   backgroundColor: "#2C1A11",
   pixelArt: true,
+  roundPixels: true,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -22,7 +23,7 @@ const config = {
       gravity: {
         y: 0,
       },
-      debug: true,
+      debug: false,
     },
   },
   scene: [Boot, Preloader, MainMenu, MainGame, GameOver],
