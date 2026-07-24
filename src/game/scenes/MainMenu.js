@@ -1,4 +1,5 @@
 import { Scene } from "phaser";
+import { resetarTodoProgresso } from "../systems/Progresso.js";
 
 export class MainMenu extends Scene {
   constructor() {
@@ -6,8 +7,9 @@ export class MainMenu extends Scene {
   }
 
   create() {
-    // Fundo Temático Marrom Escuro (Zinnwaldite Brown)
-    this.cameras.main.setBackgroundColor("#2C1A11");
+    // Imagem de fundo da tela inicial (substitui o fundo marrom sólido)
+    const fundo = this.add.image(160, 120, "tela_inicial").setDepth(-10);
+    fundo.setDisplaySize(320, 240);
 
     // Moldura elegante em dourado (Soft Gold)
     const moldura = this.add.graphics();
@@ -59,12 +61,21 @@ export class MainMenu extends Scene {
 
     // Eventos de escuta para transição suave para a cena do jogo
     this.input.once("pointerdown", () => {
-      this.scene.start("Game");
+      this.sound.play("som_click", { volume: this.registry.get("sfxVolume") });
+      this.iniciarNovoJogo();
     });
 
     this.input.keyboard.once("keydown-SPACE", () => {
-      this.scene.start("Game");
+      this.sound.play("som_click", { volume: this.registry.get("sfxVolume") });
+      this.iniciarNovoJogo();
     });
+  }
+
+  // Zera todo o progresso salvo no registro global antes de começar — evita que uma partida nova
+  // "herde" o progresso de uma anterior (ex: jogador venceu, voltou ao menu e clicou em Iniciar de novo)
+  iniciarNovoJogo() {
+    resetarTodoProgresso(this.registry);
+    this.scene.start("Sala");
   }
 }
 

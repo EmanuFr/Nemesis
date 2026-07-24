@@ -1,5 +1,8 @@
 import { Boot } from "./scenes/Boot";
-import { Game as MainGame } from "./scenes/Game";
+import { Sala } from "./scenes/Sala";
+import { Escritorio } from "./scenes/Escritorio";
+import { QuartoCasal } from "./scenes/QuartoCasal";
+import { SalaDeEstar } from "./scenes/SalaDeEstar";
 import { GameOver } from "./scenes/GameOver";
 import { MainMenu } from "./scenes/MainMenu";
 import { Preloader } from "./scenes/Preloader";
@@ -26,7 +29,7 @@ const config = {
       debug: false,
     },
   },
-  scene: [Boot, Preloader, MainMenu, MainGame, GameOver],
+  scene: [Boot, Preloader, MainMenu, Sala, Escritorio, QuartoCasal, SalaDeEstar, GameOver],
 };
 
 const StartGame = (parent) => {

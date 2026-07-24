@@ -1,12 +1,14 @@
 import { Scene } from "phaser";
 import Player from "../../player.js";
+import TensaoTimer from "../systems/TensaoTimer.js";
+import { resetarTodoProgresso } from "../systems/Progresso.js";
 
-export class Game extends Scene {
+export class Sala extends Scene {
   constructor() {
-    super("Game");
+    super("Sala");
   }
 
-  create() {
+  create(data) {
     // 1. Criar o objeto do Mapa (JSON do Tiled)
     const map = this.make.tilemap({ key: "mapa-sala" });
 
@@ -36,11 +38,16 @@ export class Game extends Scene {
     const transponivelLayer = map.createLayer("Transponivel", todosTilesets, 0, 0); // Tapetes e decorações
     const intransponivel2Layer = map.createLayer("Intransponivel 2", todosTilesets, 0, 0); // Móveis sólidos 2
     
+    // Progresso da Fase 1 persistido globalmente (sobrevive a trocas de cena, ex: ida e volta ao Escritório)
+    const estanteJaEmpurrada = this.registry.get("estanteEmpurrada") || false;
+    const espelhoJaResolvido = this.registry.get("espelhoResolvido") || false;
+
     // Novas Camadas adicionadas para interações da Fase 1!
     this.portaLayer = map.createLayer("Porta", todosTilesets, 0, 0); // Porta de saída
     this.interativoLayer = map.createLayer("Interativo", todosTilesets, 0, 0); // Espelho escondido
     this.interativoLayer.setVisible(true); // Visível desde o início, mas escondido atrás da estante
-    this.arrastarLayer = map.createLayer("Arrastar", todosTilesets, 0, 0); // Estante empurrável
+    // Se a estante já foi empurrada antes, recria a camada já na posição final (sem repetir a animação)
+    this.arrastarLayer = map.createLayer("Arrastar", todosTilesets, estanteJaEmpurrada ? -32 : 0, 0); // Estante empurrável
 
     // 4. Configurar Profundidade Visual (Z-Index correspondendo exatamente ao Tiled!)
     chaoLayer.setDepth(10);
@@ -54,7 +61,9 @@ export class Game extends Scene {
     this.arrastarLayer.setDepth(90);
 
     // Instanciação da Protagonista (Spawn seguro na área de piso livre, longe do sofá!)
-    this.player = new Player(this, 168, 168);
+    // Ao voltar do Escritório, spawna perto da porta em vez do centro da sala
+    const [spawnX, spawnY] = data && data.fromEscritorio ? [144, 76] : [168, 168];
+    this.player = new Player(this, spawnX, spawnY);
     this.player.setDepth(95);         // Jogador desenhado de acordo com a ordem do Tiled
 
     // 5. Configurar Colisões Físicas em todas as camadas necessárias
@@ -75,14 +84,19 @@ export class Game extends Scene {
     this.interativoCollider = this.physics.add.collider(this.player, this.interativoLayer); // Colisor do Espelho
     this.portaCollider = this.physics.add.collider(this.player, this.portaLayer); // Colisor da Porta (Fica bloqueada!)
 
+    // Se o espelho já foi resolvido antes, o colisor recém-criado é removido de novo (sem exigir o diálogo de novo)
+    if (espelhoJaResolvido && this.interativoCollider) {
+      this.physics.world.removeCollider(this.interativoCollider);
+    }
+
     // 6. Ajustar Limites do Mundo Físico e da Câmera
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
     // 7. Configurações de Estado de Interação da Fase 1
-    this.estanteEmpurrada = false;
-    this.espelhoResolvido = false;
+    this.estanteEmpurrada = estanteJaEmpurrada;
+    this.espelhoResolvido = espelhoJaResolvido;
     this.isDialogueActive = false;
     this.isQuizActive = false;
     this.quizStage = 1; // Controla a etapa do quiz (1 ou 2)
@@ -106,100 +120,16 @@ export class Game extends Scene {
       resolution: 4
     }).setOrigin(0.5).setVisible(false).setDepth(200);
 
-    // =========================================================================
-    // ⏱️ SISTEMA DE CRONÔMETRO DE 10 MINUTOS & ESTÁGIOS DE TENSÃO
-    // =========================================================================
-    
-    // Inicialização do Tempo Regressivo Persistente no Registro do Phaser
-    if (!this.registry.has("tempoRestante")) {
-      this.registry.set("tempoRestante", 600); // 10 minutos = 600 segundos
-    }
-    this.tempoFase = this.registry.get("tempoRestante");
-    this.speedMultiplier = 1; // Multiplicador dinâmico de velocidade (reduzido no Estágio 4)
-    this.estagioAtual = null; // Rastreia o estágio de tensão ativo para transições suaves
-
-    // Painel de UI do Cronômetro (Caixa Retrô Minimalista no canto superior direito)
-    this.timerBg = this.add.graphics();
-    this.timerBg.fillStyle(0x2C1A11, 0.9); // Zinnwaldite Brown
-    this.timerBg.lineStyle(1, 0xE3C18D, 1); // Borda Soft Gold
-    this.timerBg.fillRect(205, 10, 105, 22);
-    this.timerBg.strokeRect(205, 10, 105, 22);
-    this.timerBg.setScrollFactor(0).setDepth(190);
-
-    // Texto do Cronômetro (Formato MM:SS, 100% Nítido em 16px)
-    const minutosIniciais = Math.floor(this.tempoFase / 60);
-    const segundosIniciais = this.tempoFase % 60;
-    const textoFormatado = "Tempo: " + String(minutosIniciais).padStart(2, '0') + ":" + String(segundosIniciais).padStart(2, '0');
-    
-    this.timerText = this.add.text(257, 21, textoFormatado, {
-      fontSize: "16px",
-      fontStyle: "normal",
-      color: "#E3C18D",
-      fontFamily: "m5x7",
-      resolution: 4
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
-
-    // Overlay de Tint para Estágios de Tensão (Evita crash de cameras.main.setTint)
-    this.screenTintOverlay = this.add.graphics();
-    this.screenTintOverlay.setScrollFactor(0).setDepth(98).setVisible(false);
-
-    // Overlay Vermelho para Pulso de Batimentos Cardíacos (Estágio 4)
-    this.redOverlay = this.add.graphics();
-    this.redOverlay.fillStyle(0xff0000, 0.25);
-    this.redOverlay.fillRect(0, 0, 320, 240);
-    this.redOverlay.setScrollFactor(0).setDepth(99).setVisible(false);
-    this.redOverlay.setAlpha(0);
-    this.heartbeatTween = null;
-
-    // Evento de Tempo recorrente segundo a segundo (Sem pausar em diálogos/quizzes!)
-    this.timerEvent = this.time.addEvent({
-      delay: 1000,
-      callback: this.tickSegundo,
-      callbackScope: this,
-      loop: true
-    });
-
-    // Ouvinte defensivo de encerramento da cena para limpar o ticker
-    this.events.once("shutdown", () => {
-      if (this.timerEvent) this.timerEvent.destroy();
-    });
-
-    // Aplica os efeitos de ambientação imediatamente ao carregar a cena
-    this.atualizarEfeitosEstagio();
+    // ⏱️ Cronômetro global de 10 minutos e estágios de tensão (compartilhado entre todos os cômodos)
+    this.tensao = new TensaoTimer(this);
   }
 
   update() {
-    // Escuta tecla ESC para pausar/despausar o jogo
-    if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
-      this.togglePause();
-      return;
-    }
-
-    // Se o jogo estiver pausado, congela o ciclo e escuta o menu
-    if (this.isPaused) {
-      this.player.setVelocity(0);
-      if (Phaser.Input.Keyboard.JustDown(this.keyM)) {
-        this.scene.start("MainMenu");
-      }
-      return;
-    }
-
-    // Se o quiz estiver ativo, congela tudo e escuta as teclas 1 e 2 (Opções integradas no dialogue box!)
-    if (this.isQuizActive) {
-      this.player.setVelocity(0);
-      
-      if (Phaser.Input.Keyboard.JustDown(this.key1)) {
-        this.processarRespostaQuiz(1);
-      } else if (Phaser.Input.Keyboard.JustDown(this.key2)) {
-        this.processarRespostaQuiz(2);
-      }
-      return;
-    }
-
-    // Se o diálogo estiver ativo, congela a movimentação física e aguarda a tecla E para avançar
+    // Se o diálogo estiver ativo, congela a movimentação física; E avança, ESC pula direto pro fim
     if (this.isDialogueActive) {
       this.player.setVelocity(0);
-      
+      this.player.stopWalkSound();
+
       // Mantém a animação de repouso (idle) correta durante o diálogo
       if (this.player.lastDirection === "side") {
         this.player.setFlipX(this.player.lastFlipX);
@@ -210,8 +140,44 @@ export class Game extends Scene {
         this.player.anims.play("idle-down", true);
       }
 
+      if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
+        this.dialogueIndex = this.dialogueLines.length;
+        this.advanceDialogue();
+        return;
+      }
+
       if (Phaser.Input.Keyboard.JustDown(this.keyE)) {
         this.advanceDialogue();
+      }
+      return;
+    }
+
+    // Escuta tecla ESC para pausar/despausar o jogo
+    if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
+      this.sound.play("som_click", { volume: this.registry.get("sfxVolume") });
+      this.togglePause();
+      return;
+    }
+
+    // Se o jogo estiver pausado, congela o ciclo e escuta o menu
+    if (this.isPaused) {
+      this.player.setVelocity(0);
+      this.player.stopWalkSound();
+      if (Phaser.Input.Keyboard.JustDown(this.keyM)) {
+        this.scene.start("MainMenu");
+      }
+      return;
+    }
+
+    // Se o quiz estiver ativo, congela tudo e escuta as teclas 1 e 2 (Opções integradas no dialogue box!)
+    if (this.isQuizActive) {
+      this.player.setVelocity(0);
+      this.player.stopWalkSound();
+
+      if (Phaser.Input.Keyboard.JustDown(this.key1)) {
+        this.processarRespostaQuiz(1);
+      } else if (Phaser.Input.Keyboard.JustDown(this.key2)) {
+        this.processarRespostaQuiz(2);
       }
       return;
     }
@@ -320,6 +286,7 @@ export class Game extends Scene {
       // Controle de volume do Som do Jogo (efeitos sonoros a serem adicionados futuramente)
       this.criarSliderPausa("Som do Jogo", 98, 114, this.registry.get("sfxVolume"), (valor) => {
         this.registry.set("sfxVolume", valor);
+        if (this.player && this.player.walkSound) this.player.walkSound.setVolume(valor);
       });
 
       // Botão - Continuar
@@ -327,11 +294,11 @@ export class Game extends Scene {
         this.togglePause();
       });
 
-      // Botão - Reiniciar (reinicia a fase do zero, com o cronômetro completo)
+      // Botão - Reiniciar (reinicia o jogo inteiro do zero: cronômetro e progresso de todas as fases)
       this.criarBotaoPausa("Reiniciar", 170, () => {
-        this.registry.set("tempoRestante", 600);
+        resetarTodoProgresso(this.registry);
         this.isPaused = false;
-        this.scene.restart();
+        this.scene.start("Sala");
       });
 
       // Botão - Menu Inicial
@@ -451,6 +418,7 @@ export class Game extends Scene {
       label.setColor("#E3C18D");
     });
     graphics.on("pointerdown", () => {
+      this.sound.play("som_click", { volume: this.registry.get("sfxVolume") });
       this.desenharBotaoQuiz(graphics, x, y, width, height, false, true);
       label.setColor("#ffffff");
       this.time.delayedCall(100, onClick);
@@ -574,6 +542,14 @@ export class Game extends Scene {
   }
 
   arrastarEstanteComTransicao() {
+    // Marca como resolvido JÁ AQUI (não só no onComplete): evita que apertar E de novo durante a
+    // animação reabra o diálogo da estante e dispare a transição mais uma vez
+    this.estanteEmpurrada = true;
+    this.registry.set("estanteEmpurrada", true);
+
+    // Toca o som de arrastar a estante
+    this.sound.play("som_arrastar", { volume: this.registry.get("sfxVolume") });
+
     // Toca a vibração de câmera constante enquanto empurra
     const shakeEvent = this.time.addEvent({
       delay: 50,
@@ -591,8 +567,7 @@ export class Game extends Scene {
       ease: "Power2", // Ease suave
       onComplete: () => {
         shakeEvent.destroy(); // Para o tremor de terra
-        this.estanteEmpurrada = true;
-        
+
         // Mensagem flutuante rápida de sucesso com alto contraste e plano (sem contornos ou sombras)
         const popText = this.add.text(80, 52, "Estante Movida!", {
           fontSize: "16px",
@@ -630,7 +605,8 @@ export class Game extends Scene {
 
     this.startDialogue(falas, () => {
       this.espelhoResolvido = true;
-      
+      this.registry.set("espelhoResolvido", true);
+
       // Efeito de clarão brilhante na câmera simbolizando a vitória
       this.cameras.main.flash(800, 255, 255, 255);
       
@@ -653,14 +629,14 @@ export class Game extends Scene {
     ];
 
     this.startDialogue(falasTransicao, () => {
+      // Toca o som da porta se abrindo, marcando a passagem de cena
+      this.sound.play("som_porta", { volume: this.registry.get("sfxVolume") });
+
       // Efeito cinematográfico de fade-out suave para o branco (luz/liberdade)
       this.cameras.main.fadeOut(1500, 255, 255, 255);
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-        if (this.timerEvent) {
-          this.timerEvent.destroy();
-        }
-        this.registry.set("resultadoFinal", "sucesso");
-        this.scene.start("GameOver");
+        // O cronômetro é global (TensaoTimer) e continua contando no próximo cômodo
+        this.scene.start("Escritorio");
       });
     });
   }
@@ -723,6 +699,8 @@ export class Game extends Scene {
 
   advanceDialogue() {
     if (this.dialogueIndex < this.dialogueLines.length) {
+      this.sound.play("som_swap", { volume: this.registry.get("sfxVolume") });
+
       const line = this.dialogueLines[this.dialogueIndex];
 
       // Formatação e cores do diálogo
@@ -888,179 +866,4 @@ export class Game extends Scene {
     });
   }
 
-  // =========================================================================
-  // ⏱️ MÉTODOS DO CRONÔMETRO E CONTROLE DE ESTÁGIOS DE TENSÃO
-  // =========================================================================
-
-  tickSegundo() {
-    if (this.isPaused) {
-      return;
-    }
-
-    this.tempoFase--;
-    this.registry.set("tempoRestante", this.tempoFase);
-
-    // Formatação de minutos/segundos
-    const minutos = Math.floor(this.tempoFase / 60);
-    const segundos = this.tempoFase % 60;
-    const strMinutos = String(minutos).padStart(2, '0');
-    const strSegundos = String(segundos).padStart(2, '0');
-    
-    // Efeito visual de dois-pontos piscando
-    const caractereSeparador = segundos % 2 === 0 ? ":" : " ";
-    this.timerText.setText(`Tempo: ${strMinutos}${caractereSeparador}${strSegundos}`);
-
-    this.atualizarEfeitosEstagio();
-
-    if (this.tempoFase <= 0) {
-      if (this.timerEvent) {
-        this.timerEvent.destroy();
-      }
-      this.fimDoTempoAbuso();
-    }
-  }
-
-  atualizarEfeitosEstagio() {
-    // 1. Determina qual deve ser o novo estágio ativo baseado no tempo restante
-    let novoEstagio = 1;
-    if (this.tempoFase > 450) {
-      novoEstagio = 1;
-    } else if (this.tempoFase > 300) {
-      novoEstagio = 2;
-    } else if (this.tempoFase > 120) {
-      novoEstagio = 3;
-    } else {
-      novoEstagio = 4;
-    }
-
-    // 2. Se for a primeira carga (estagioAtual === null), desenha a cor correspondente sem transição
-    if (this.estagioAtual === null) {
-      this.estagioAtual = novoEstagio;
-      this.screenTintOverlay.clear();
-      
-      let cor = 0x000000;
-      let alphaAlvo = 0;
-      
-      if (novoEstagio === 2) { cor = 0xfffacd; alphaAlvo = 0.12; }
-      else if (novoEstagio === 3) { cor = 0xffb87a; alphaAlvo = 0.16; }
-      else if (novoEstagio === 4) { cor = 0xff4d4d; alphaAlvo = 0.20; }
-      
-      if (novoEstagio > 1) {
-        this.screenTintOverlay.fillStyle(cor, 1);
-        this.screenTintOverlay.fillRect(0, 0, 320, 240);
-        this.screenTintOverlay.setVisible(true);
-        this.screenTintOverlay.setAlpha(alphaAlvo);
-      } else {
-        this.screenTintOverlay.setVisible(false);
-      }
-    }
-    // 3. Se o estágio mudou durante o jogo, dispara a transição suave de fade out/in (2.5 segundos totais)
-    else if (this.estagioAtual !== novoEstagio) {
-      const estagioAnterior = this.estagioAtual;
-      this.estagioAtual = novoEstagio;
-      
-      // Desativa batimentos se saímos do estágio 4 por algum motivo
-      if (estagioAnterior === 4 && novoEstagio < 4) {
-        if (this.heartbeatTween) {
-          this.heartbeatTween.destroy();
-          this.heartbeatTween = null;
-        }
-        this.redOverlay.setVisible(false);
-      }
-
-      // Interação especial de tremor e diálogo no início do Estágio 3 (299 segundos)
-      if (novoEstagio === 3) {
-        this.cameras.main.shake(600, 0.006);
-        this.startDialogue([
-          "Protagonista: O ambiente está ficando sufocante... Sinto que o tempo está contra mim.",
-          "Nêmesis: A pressão psicológica está se intensificando. Não deixe o ciclo de abusos se fechar!"
-        ], null);
-      }
-
-      // Fade-out suave do filtro anterior (1.0 segundo)
-      this.tweens.add({
-        targets: this.screenTintOverlay,
-        alpha: 0,
-        duration: 1000,
-        ease: "Linear",
-        onComplete: () => {
-          this.screenTintOverlay.clear();
-          
-          let cor = 0x000000;
-          let alphaAlvo = 0;
-          
-          if (novoEstagio === 2) { cor = 0xfffacd; alphaAlvo = 0.12; }
-          else if (novoEstagio === 3) { cor = 0xffb87a; alphaAlvo = 0.16; }
-          else if (novoEstagio === 4) { cor = 0xff4d4d; alphaAlvo = 0.20; }
-          
-          if (novoEstagio > 1) {
-            this.screenTintOverlay.fillStyle(cor, 1);
-            this.screenTintOverlay.fillRect(0, 0, 320, 240);
-            this.screenTintOverlay.setVisible(true);
-            
-            // Fade-in suave do novo filtro colorido (1.5 segundos)
-            this.tweens.add({
-              targets: this.screenTintOverlay,
-              alpha: alphaAlvo,
-              duration: 1500,
-              ease: "Linear"
-            });
-          } else {
-            this.screenTintOverlay.setVisible(false);
-          }
-        }
-      });
-    }
-
-    // 4. Efeitos contínuos que rodam a cada segundo dentro do estágio ativo
-    if (this.estagioAtual === 4 && this.tempoFase > 0) {
-      // Redução de 15% na velocidade da protagonista (Opção B)
-      this.speedMultiplier = 0.85;
-
-      // Piscar cor do texto e borda do timer em vermelho/ouro a cada segundo
-      if (this.tempoFase % 2 === 0) {
-        this.timerText.setColor("#ff3333");
-        this.timerBg.clear();
-        this.timerBg.fillStyle(0x2C1A11, 0.9);
-        this.timerBg.lineStyle(1.5, 0xff3333, 1);
-        this.timerBg.fillRect(205, 10, 105, 22);
-        this.timerBg.strokeRect(205, 10, 105, 22);
-      } else {
-        this.timerText.setColor("#E3C18D");
-        this.timerBg.clear();
-        this.timerBg.fillStyle(0x2C1A11, 0.9);
-        this.timerBg.lineStyle(1, 0xE3C18D, 1);
-        this.timerBg.fillRect(205, 10, 105, 22);
-        this.timerBg.strokeRect(205, 10, 105, 22);
-      }
-
-      // Efeito de Pulsação de Batimento Cardíaco (Overlay vermelho pulsando)
-      if (!this.heartbeatTween) {
-        this.redOverlay.setVisible(true);
-        this.heartbeatTween = this.tweens.add({
-          targets: this.redOverlay,
-          alpha: { from: 0.02, to: 0.4 },
-          duration: 500,
-          yoyo: true,
-          repeat: -1,
-          ease: "Sine.easeInOut"
-        });
-      }
-    } else {
-      // Velocidade normal nos demais estágios
-      this.speedMultiplier = 1;
-    }
-  }
-
-  fimDoTempoAbuso() {
-    this.physics.world.pause();
-    this.player.setVelocity(0);
-    this.registry.set("resultadoFinal", "timeout");
-    
-    // Efeito cinematográfico de fade-out para o preto e transição
-    this.cameras.main.fadeOut(1500, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start("GameOver");
-    });
-  }
 }

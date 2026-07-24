@@ -1,4 +1,5 @@
 import { Scene } from "phaser";
+import { resetarTodoProgresso } from "../systems/Progresso.js";
 
 export class GameOver extends Scene {
   constructor() {
@@ -96,11 +97,13 @@ export class GameOver extends Scene {
 
       // Eventos para voltar ao menu inicial
       this.input.once("pointerdown", () => {
+        this.sound.play("som_click", { volume: this.registry.get("sfxVolume") });
         this.registry.set("tempoRestante", 600); // Reseta o tempo
         this.scene.start("MainMenu");
       });
 
       this.input.keyboard.once("keydown-SPACE", () => {
+        this.sound.play("som_click", { volume: this.registry.get("sfxVolume") });
         this.registry.set("tempoRestante", 600); // Reseta o tempo
         this.scene.start("MainMenu");
       });
@@ -182,11 +185,12 @@ export class GameOver extends Scene {
         loop: -1
       });
 
-      // Eventos para reiniciar e repor o tempo
+      // Eventos para reiniciar e repor o tempo — zera o progresso de todas as fases, o jogo sempre
+      // recomeça do zero
       const recomecarPartida = () => {
-        this.registry.set("tempoRestante", 600); // Reseta o tempo para 10 minutos
-        this.registry.set("resultadoFinal", "sucesso"); // Reseta estado
-        this.scene.start("Game"); // Reinicia a cena do quarto
+        this.sound.play("som_click", { volume: this.registry.get("sfxVolume") });
+        resetarTodoProgresso(this.registry);
+        this.scene.start("Sala");
       };
 
       this.input.once("pointerdown", recomecarPartida);

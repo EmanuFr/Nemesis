@@ -36,6 +36,19 @@ export default class Player extends Physics.Arcade.Sprite {
 
     this.lastDirection = "down";
     this.lastFlipX = false;
+
+    // 7. Som de passos (em loop, tocado apenas enquanto a personagem se move)
+    this.walkSound = scene.sound.add("som_andar", {
+      loop: true,
+      volume: scene.registry.get("sfxVolume")
+    });
+  }
+
+  // Para o som de passos com segurança (usado quando o jogo congela: diálogo, quiz, pausa)
+  stopWalkSound() {
+    if (this.walkSound && this.walkSound.isPlaying) {
+      this.walkSound.stop();
+    }
   }
 
   createPlayerAnimations(scene) {
@@ -110,6 +123,14 @@ export default class Player extends Physics.Arcade.Sprite {
 
     const velocityVector = new Phaser.Math.Vector2(dirX, dirY);
     velocityVector.normalize();
+
+    // Toca/para o som de passos de acordo com o movimento da personagem
+    const estaMovendo = dirX !== 0 || dirY !== 0;
+    if (estaMovendo && !this.walkSound.isPlaying) {
+      this.walkSound.play();
+    } else if (!estaMovendo && this.walkSound.isPlaying) {
+      this.walkSound.stop();
+    }
 
     // Suporte para multiplicador de velocidade controlado pela cena (ex: pânico do Estágio 4)
     const multiplicador = this.scene.speedMultiplier !== undefined ? this.scene.speedMultiplier : 1;

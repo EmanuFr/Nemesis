@@ -21,39 +21,85 @@ export class Preloader extends Scene {
       frameHeight: 32,
     });
 
-    // 1. Carregar o arquivo de Mapa (JSON do Tiled)
+    // 1. Carregar os arquivos de Mapa (JSON do Tiled)
     this.load.tilemapTiledJSON("mapa-sala", "Tiled/Sala.tmj");
+    this.load.tilemapTiledJSON("mapa-escritorio", "Tiled/Escritorio.tmj");
+    this.load.tilemapTiledJSON("mapa-quarto-casal", "Tiled/QuartoCasal.tmj");
+    this.load.tilemapTiledJSON("mapa-sala-de-estar", "Tiled/SalaDeEstar.tmj");
 
     // 2. Carregar as Imagens dos Tilesets
-    this.load.image("portas_janelas", "Top-Down_Retro_Interior/TopDownHouse_DoorsAndWindows.png");
-    this.load.image("portas_abertas", "Top-Down_Retro_Interior/TopDownHouse_FloorsAndWalls_OpenDoors.png");
-    this.load.image("chao_paredes", "Top-Down_Retro_Interior/TopDownHouse_FloorsAndWalls.png");
-    this.load.image("moveis_1", "Top-Down_Retro_Interior/TopDownHouse_FurnitureState1.png");
-    this.load.image("moveis_2", "Top-Down_Retro_Interior/TopDownHouse_FurnitureState2.png");
-    this.load.image("itens_pequenos", "Top-Down_Retro_Interior/TopDownHouse_SmallItems.png");
+    this.load.image(
+      "portas_janelas",
+      "Top-Down_Retro_Interior/TopDownHouse_DoorsAndWindows.png",
+    );
+    this.load.image(
+      "portas_abertas",
+      "Top-Down_Retro_Interior/TopDownHouse_FloorsAndWalls_OpenDoors.png",
+    );
+    this.load.image(
+      "chao_paredes",
+      "Top-Down_Retro_Interior/TopDownHouse_FloorsAndWalls.png",
+    );
+    this.load.image(
+      "moveis_1",
+      "Top-Down_Retro_Interior/TopDownHouse_FurnitureState1.png",
+    );
+    this.load.image(
+      "moveis_2",
+      "Top-Down_Retro_Interior/TopDownHouse_FurnitureState2.png",
+    );
+    this.load.image(
+      "itens_pequenos",
+      "Top-Down_Retro_Interior/TopDownHouse_SmallItems.png",
+    );
+    this.load.image(
+      "cama_casal",
+      "Top-Down_Retro_Interior/cama_casal.png",
+    );
+    this.load.image(
+      "cartela_pilulas",
+      "Top-Down_Retro_Interior/cartela_pilulas.png",
+    );
+    this.load.image(
+      "tranca_solta",
+      "Top-Down_Retro_Interior/tranca_solta.png",
+    );
 
     // 3. Carregar Recursos de UI fornecidos pelo Usuário
     this.load.image("nemesis_avatar", "Rosto nemesis.png");
+    this.load.image("tela_inicial", "tela_inicial.png");
     this.load.image("button_retro", "../UI/Freebuttons/LongButtons.png");
-    this.load.spritesheet("button_retro_sheet", "../UI/Freebuttons/LongButtons.png", {
-      frameWidth: 64,
-      frameHeight: 16
-    });
+    this.load.spritesheet(
+      "button_retro_sheet",
+      "../UI/Freebuttons/LongButtons.png",
+      {
+        frameWidth: 64,
+        frameHeight: 16,
+      },
+    );
 
     // 4. Carregar a Trilha Sonora do Jogo
     this.load.audio("musica_fundo", "Songs/Trilha sonora .m4a");
+
+    // 5. Carregar os Efeitos Sonoros (SFX)
+    this.load.audio("som_porta", "Songs/abrindoPorta.mp3");
+    this.load.audio("som_arrastar", "Songs/arrastar.wav");
+    this.load.audio("som_click", "Songs/click.mp3");
+    this.load.audio("som_andar", "Songs/walk.mp3");
+    this.load.audio("som_swap", "Songs/swap.wav");
   }
 
   create() {
     // Valores padrão de volume (persistidos globalmente no registro do Phaser)
-    if (!this.registry.has("musicVolume")) this.registry.set("musicVolume", 0.5);
+    if (!this.registry.has("musicVolume"))
+      this.registry.set("musicVolume", 0.15);
     if (!this.registry.has("sfxVolume")) this.registry.set("sfxVolume", 0.5);
 
     // Inicia a trilha sonora em loop, tocando através de todas as cenas do jogo
     if (!this.sound.get("musica_fundo")) {
       const musica = this.sound.add("musica_fundo", {
         loop: true,
-        volume: this.registry.get("musicVolume")
+        volume: this.registry.get("musicVolume"),
       });
       musica.play();
     }
